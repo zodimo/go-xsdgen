@@ -81,7 +81,7 @@ func Analyze(r io.Reader) (*Schema, error) {
 					// Update existing attribute stats
 					existing := current.Attributes[attrName]
 					existing.Count++
-					existing.Type = mergeTypes(existing.Type, inferType(attr.Value))
+					existing.Type = MergeSimpleTypes(existing.Type, inferType(attr.Value))
 				}
 			}
 
@@ -106,7 +106,7 @@ func Analyze(r io.Reader) (*Schema, error) {
 						ended.SimpleType = TypeString
 					} else {
 						// e.g. was Int, now empty -> Int + String = String
-						ended.SimpleType = mergeTypes(ended.SimpleType, TypeString)
+						ended.SimpleType = MergeSimpleTypes(ended.SimpleType, TypeString)
 					}
 				}
 
@@ -132,7 +132,7 @@ func Analyze(r io.Reader) (*Schema, error) {
 					if current.SimpleType == TypeUnknown {
 						current.SimpleType = inferred
 					} else {
-						current.SimpleType = mergeTypes(current.SimpleType, inferred)
+						current.SimpleType = MergeSimpleTypes(current.SimpleType, inferred)
 					}
 				}
 			}
@@ -174,7 +174,8 @@ func inferType(val string) SimpleType {
 	return TypeString
 }
 
-func mergeTypes(t1, t2 SimpleType) SimpleType {
+// MergeSimpleTypes combines two SimpleTypes into the most specific common supertype.
+func MergeSimpleTypes(t1, t2 SimpleType) SimpleType {
 	if t1 == t2 {
 		return t1
 	}
