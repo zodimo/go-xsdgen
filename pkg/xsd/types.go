@@ -6,6 +6,7 @@ type SimpleType string
 const (
 	TypeString   SimpleType = "string"
 	TypeInt      SimpleType = "int"
+	TypeLong     SimpleType = "long"
 	TypeFloat    SimpleType = "decimal"
 	TypeBool     SimpleType = "boolean"
 	TypeDateTime SimpleType = "dateTime"
@@ -23,15 +24,16 @@ type Attribute struct {
 
 // Element represents an XML element
 type Element struct {
-	Name       string
-	SimpleType SimpleType
-	Complex    bool
-	Attributes map[string]*Attribute
-	Children   map[string]*Element
-	ChildrenOrder []string // To maintain order of children
-	MinOccurs  int
-	MaxOccurs  int // -1 for unbounded
-	Count      int // How many times this element was seen in the current context
+	Name             string
+	SimpleType       SimpleType
+	Complex          bool
+	Attributes       map[string]*Attribute
+	Children         map[string]*Element
+	ChildrenOrder    []string // To maintain order of children
+	MinOccurs        int
+	MaxOccurs        int // -1 for unbounded
+	Count            int // How many times this element was seen in the current context
+	LastSeenInstance int // ID of the parent instance where this child was last seen
 }
 
 // Schema represents the root of the analyzed XML structure

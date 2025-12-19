@@ -56,7 +56,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		err = xsd.Generate(schema, style)
+		err = xsd.Generate(os.Stdout, schema, style)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error generating XSD: %v\n", err)
 			os.Exit(1)

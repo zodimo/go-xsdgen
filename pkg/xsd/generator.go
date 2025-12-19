@@ -3,7 +3,7 @@ package xsd
 import (
 	"encoding/xml"
 	"fmt"
-	"os"
+	"io"
 )
 
 type Style string
@@ -14,7 +14,7 @@ const (
 	StyleVenetianBlind Style = "venetian"
 )
 
-func Generate(schema *Schema, style Style) error {
+func Generate(w io.Writer, schema *Schema, style Style) error {
 	xsd := &XSDSchema{
 		XmlnsXs:            "http://www.w3.org/2001/XMLSchema",
 		ElementFormDefault: "qualified",
@@ -31,9 +31,9 @@ func Generate(schema *Schema, style Style) error {
 		return fmt.Errorf("unknown style: %s", style)
 	}
 
-	enc := xml.NewEncoder(os.Stdout)
+	enc := xml.NewEncoder(w)
 	enc.Indent("", "  ")
-	fmt.Println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
+	fmt.Fprintln(w, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
 	return enc.Encode(xsd)
 }
 
@@ -41,6 +41,8 @@ func mapType(t SimpleType) string {
 	switch t {
 	case TypeInt:
 		return "xs:int"
+	case TypeLong:
+		return "xs:long"
 	case TypeFloat:
 		return "xs:decimal"
 	case TypeBool:

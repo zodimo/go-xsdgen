@@ -8,11 +8,16 @@ import (
 	"time"
 )
 
+type stackItem struct {
+	Element     *Element
+	HasCharData bool
+}
+
 // Analyze parses the XML from the reader and returns a Schema definition
 func Analyze(r io.Reader) (*Schema, error) {
 	decoder := xml.NewDecoder(r)
 	var root *Element
-	var stack []*Element
+	var stack []*stackItem
 
 	for {
 		t, err := decoder.Token()
@@ -33,19 +38,33 @@ func Analyze(r io.Reader) (*Schema, error) {
 				current = root
 				current.Count++
 			} else {
-				parent := stack[len(stack)-1]
+				parentItem := stack[len(stack)-1]
+				parent := parentItem.Element
 				parent.Complex = true
 
 				// Check if child already exists
 				if existing, ok := parent.Children[name]; ok {
 					current = existing
-					current.MaxOccurs = -1 // If seen again, it can occur multiple times
 					current.Count++
+
+					// If seen again in same parent instance, it's repeating
+					if current.LastSeenInstance == parent.Count {
+						current.MaxOccurs = -1
+					}
+					current.LastSeenInstance = parent.Count
+
 				} else {
 					current = NewElement(name)
 					parent.Children[name] = current
 					parent.ChildrenOrder = append(parent.ChildrenOrder, name)
 					current.Count = 1
+					current.LastSeenInstance = parent.Count
+
+					// If this is a new child definition but parent has appeared before,
+					// it means this child was missing in previous instances.
+					if parent.Count > 1 {
+						current.MinOccurs = 0
+					}
 				}
 			}
 
@@ -66,24 +85,55 @@ func Analyze(r io.Reader) (*Schema, error) {
 				}
 			}
 
-			// Mark missing attributes in previous instances as not required?
-			// Actually, "Required" logic needs to be checked against Element.Count.
-			// We can do a post-processing pass or check at the end. For now, track counts.
-
-			stack = append(stack, current)
+			stack = append(stack, &stackItem{Element: current})
 
 		case xml.EndElement:
+			// When finishing a parent, check which children were NOT seen
+			if len(stack) > 0 {
+				item := stack[len(stack)-1]
+				ended := item.Element
+
+				// Identify empty elements (no CharData seen)
+				// If an element is empty, it might be a String in disguise (or just optional content).
+				// If strictly empty <tag/>, for XSD type inference, treating it as String helps
+				// if other instances have text. If it was Int, and now Empty, it becomes String (Int + String = String).
+				if !item.HasCharData {
+					// Treat empty content as equivalent to empty string, which forces String type if combined with non-string,
+					// or remains String if it was unknown.
+					// Note: inferType("") returns TypeString usually, but let's be explicit.
+					// If we specifically want empty to equate to "potential string", we merge with TypeString.
+					if ended.SimpleType == TypeUnknown {
+						ended.SimpleType = TypeString
+					} else {
+						// e.g. was Int, now empty -> Int + String = String
+						ended.SimpleType = mergeTypes(ended.SimpleType, TypeString)
+					}
+				}
+
+				// Check missing children in this instance
+				for _, child := range ended.Children {
+					if child.LastSeenInstance != ended.Count {
+						child.MinOccurs = 0
+					}
+				}
+			}
 			stack = stack[:len(stack)-1]
 
 		case xml.CharData:
 			val := strings.TrimSpace(string(se))
-			if len(val) > 0 && len(stack) > 0 {
-				current := stack[len(stack)-1]
-				inferred := inferType(val)
-				if current.SimpleType == TypeUnknown {
-					current.SimpleType = inferred
-				} else {
-					current.SimpleType = mergeTypes(current.SimpleType, inferred)
+			if len(stack) > 0 {
+				item := stack[len(stack)-1]
+				// Only consider it data if it's not just whitespace
+				// (XML non-ignorable whitespace is tricky, but TrimSpace is standard for data-oriented XML)
+				if len(val) > 0 {
+					item.HasCharData = true
+					current := item.Element
+					inferred := inferType(val)
+					if current.SimpleType == TypeUnknown {
+						current.SimpleType = inferred
+					} else {
+						current.SimpleType = mergeTypes(current.SimpleType, inferred)
+					}
 				}
 			}
 		}
@@ -97,8 +147,17 @@ func Analyze(r io.Reader) (*Schema, error) {
 }
 
 func inferType(val string) SimpleType {
-	if _, err := strconv.Atoi(val); err == nil {
-		return TypeInt
+	if n, err := strconv.ParseInt(val, 10, 64); err == nil {
+		// Check range for xs:int (32-bit signed)
+		// Min: -2147483648, Max: 2147483647
+		// XSD int is implementation dependent but typically 32-bit.
+		// Safe bet: if it fits in 32-bit, call it int. Else long.
+		const minInt32 = -2147483648
+		const maxInt32 = 2147483647
+		if n >= minInt32 && n <= maxInt32 {
+			return TypeInt
+		}
+		return TypeLong
 	}
 	if _, err := strconv.ParseFloat(val, 64); err == nil {
 		return TypeFloat
@@ -106,7 +165,6 @@ func inferType(val string) SimpleType {
 	if strings.ToLower(val) == "true" || strings.ToLower(val) == "false" {
 		return TypeBool
 	}
-	// Try dates
 	if _, err := time.Parse("2006-01-02", val); err == nil {
 		return TypeDate
 	}
@@ -126,11 +184,21 @@ func mergeTypes(t1, t2 SimpleType) SimpleType {
 	if t2 == TypeUnknown {
 		return t1
 	}
-	// If mixed numeric types, promote to float
-	if (t1 == TypeInt && t2 == TypeFloat) || (t1 == TypeFloat && t2 == TypeInt) {
+
+	// Int/Long Hierarchy
+	if (t1 == TypeInt && t2 == TypeLong) || (t1 == TypeLong && t2 == TypeInt) {
+		return TypeLong
+	}
+
+	// Numeric -> Decimal
+	// Int/Long + Float -> Float (Decimal)
+	isNumeric1 := (t1 == TypeInt || t1 == TypeLong || t1 == TypeFloat)
+	isNumeric2 := (t2 == TypeInt || t2 == TypeLong || t2 == TypeFloat)
+	if isNumeric1 && isNumeric2 {
 		return TypeFloat
 	}
-	// Fallback to string for mismatched types
+
+	// Fallback to string for mismatched types (e.g. Bool + Int, Int + String)
 	return TypeString
 }
 
@@ -165,12 +233,6 @@ func finalizeStructure(el *Element) {
 	// XML Schema default is MinOccurs=1.
 
 	for _, child := range el.Children {
-		// Heuristic: If total child count < parent count, it must be optional.
-		if child.Count < el.Count {
-			child.MinOccurs = 0
-		} else {
-			// It might be 1 or more. Default to 1.
-		}
 		finalizeStructure(child)
 	}
 }
