@@ -9,8 +9,9 @@ import (
 )
 
 type stackItem struct {
-	Element     *Element
-	HasCharData bool
+	Element        *Element
+	HasCharData    bool
+	LastChildIndex int
 }
 
 // Analyze parses the XML from the reader and returns a Schema definition
@@ -53,10 +54,32 @@ func Analyze(r io.Reader) (*Schema, error) {
 					}
 					current.LastSeenInstance = parent.Count
 
+					// Attempt to find where we are in the ordered list
+					foundIndex := -1
+					for k := parentItem.LastChildIndex + 1; k < len(parent.ChildrenOrder); k++ {
+						if parent.ChildrenOrder[k] == name {
+							foundIndex = k
+							break
+						}
+					}
+					// If found forward, advance our index
+					if foundIndex != -1 {
+						parentItem.LastChildIndex = foundIndex
+					}
+
 				} else {
 					current = NewElement(name)
 					parent.Children[name] = current
-					parent.ChildrenOrder = append(parent.ChildrenOrder, name)
+
+					// Insert into ChildrenOrder at the correct position
+					insertPos := parentItem.LastChildIndex + 1
+					if insertPos >= len(parent.ChildrenOrder) {
+						parent.ChildrenOrder = append(parent.ChildrenOrder, name)
+					} else {
+						parent.ChildrenOrder = append(parent.ChildrenOrder[:insertPos], append([]string{name}, parent.ChildrenOrder[insertPos:]...)...)
+					}
+					parentItem.LastChildIndex = insertPos
+
 					current.Count = 1
 					current.LastSeenInstance = parent.Count
 
@@ -85,7 +108,7 @@ func Analyze(r io.Reader) (*Schema, error) {
 				}
 			}
 
-			stack = append(stack, &stackItem{Element: current})
+			stack = append(stack, &stackItem{Element: current, LastChildIndex: -1})
 
 		case xml.EndElement:
 			// When finishing a parent, check which children were NOT seen
