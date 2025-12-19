@@ -31,9 +31,10 @@ type Element struct {
 	Children         map[string]*Element
 	ChildrenOrder    []string // To maintain order of children
 	MinOccurs        int
-	MaxOccurs        int // -1 for unbounded
-	Count            int // How many times this element was seen in the current context
-	LastSeenInstance int // ID of the parent instance where this child was last seen
+	MaxOccurs        int  // -1 for unbounded
+	Count            int  // How many times this element was seen in the current context
+	LastSeenInstance int  // ID of the parent instance where this child was last seen
+	Nullable         bool // If true, the element can be nillable (e.g. was empty)
 }
 
 // Schema represents the root of the analyzed XML structure

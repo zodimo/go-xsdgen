@@ -17,6 +17,7 @@ type XSDElement struct {
 	Type      string          `xml:"type,attr,omitempty"`
 	MinOccurs string          `xml:"minOccurs,attr,omitempty"`
 	MaxOccurs string          `xml:"maxOccurs,attr,omitempty"`
+	Nillable  string          `xml:"nillable,attr,omitempty"`
 	Ref       string          `xml:"ref,attr,omitempty"`
 	Complex   *XSDComplexType `xml:"xs:complexType,omitempty"`
 }

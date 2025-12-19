@@ -70,6 +70,9 @@ func buildElementRD(el *Element) *XSDElement {
 		MinOccurs: fmtOccurs(el.MinOccurs),
 		MaxOccurs: fmtOccurs(el.MaxOccurs),
 	}
+	if el.Nullable {
+		xEl.Nillable = "true"
+	}
 
 	if !el.Complex && len(el.Attributes) == 0 {
 		xEl.Type = mapType(el.SimpleType)
@@ -127,6 +130,9 @@ func buildGlobalSalami(el *Element, globals map[string]*XSDElement, xsd *XSDSche
 	}
 
 	xEl := &XSDElement{Name: el.Name}
+	if el.Nullable {
+		xEl.Nillable = "true"
+	}
 	globals[el.Name] = xEl
 
 	if !el.Complex && len(el.Attributes) == 0 {
@@ -211,6 +217,9 @@ func buildTypeVenetian(el *Element, types map[string]*XSDComplexType, xsd *XSDSc
 			Name:      child.Name,
 			MinOccurs: fmtOccurs(child.MinOccurs),
 			MaxOccurs: fmtOccurs(child.MaxOccurs),
+		}
+		if child.Nullable {
+			elem.Nillable = "true"
 		}
 
 		// If it's a standard simple type (starts with xs:), use Type=

@@ -40,6 +40,12 @@ func mergeElements(e1, e2 *Element, report *MergeReport, path string) *Element {
 	merged.Complex = e1.Complex || e2.Complex
 	merged.MinOccurs = min(e1.MinOccurs, e2.MinOccurs)
 	merged.MaxOccurs = max(e1.MaxOccurs, e2.MaxOccurs)
+	merged.Nullable = e1.Nullable || e2.Nullable
+
+	// Report Nullable change
+	if merged.Nullable && (!e1.Nullable || !e2.Nullable) {
+		report.ConstraintsRelaxed = append(report.ConstraintsRelaxed, fmt.Sprintf("%s: Nullable false -> true", currentPath))
+	}
 
 	// If e1 has different min/max than merged (which is the relaxation of both), report it?
 	// Actually, strict relaxation is: min = min(min1, min2), max = max(max1, max2)

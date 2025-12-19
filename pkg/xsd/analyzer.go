@@ -121,16 +121,10 @@ func Analyze(r io.Reader) (*Schema, error) {
 				// If strictly empty <tag/>, for XSD type inference, treating it as String helps
 				// if other instances have text. If it was Int, and now Empty, it becomes String (Int + String = String).
 				if !item.HasCharData {
-					// Treat empty content as equivalent to empty string, which forces String type if combined with non-string,
-					// or remains String if it was unknown.
-					// Note: inferType("") returns TypeString usually, but let's be explicit.
-					// If we specifically want empty to equate to "potential string", we merge with TypeString.
-					if ended.SimpleType == TypeUnknown {
-						ended.SimpleType = TypeString
-					} else {
-						// e.g. was Int, now empty -> Int + String = String
-						ended.SimpleType = MergeSimpleTypes(ended.SimpleType, TypeString)
-					}
+					// Empty content implies the element is nillable.
+					// We do NOT default to String here, because if we later see an Int, we want to allow it to be Int.
+					// If it remains Unknown (never has content), it will be mapped to String by the generator.
+					ended.Nullable = true
 				}
 
 				// Check missing children in this instance

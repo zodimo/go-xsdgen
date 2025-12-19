@@ -108,3 +108,31 @@ func TestMergeSchemas_NewChild(t *testing.T) {
 		t.Errorf("Expected field added report for child, got: %v", report.FieldsAdded)
 	}
 }
+
+func TestMergeSchemas_Nullable(t *testing.T) {
+	s1 := &Schema{Root: NewElement("root")}
+	s1.Root.Nullable = true
+
+	s2 := &Schema{Root: NewElement("root")}
+	s2.Root.Nullable = false
+
+	merged, report, err := MergeSchemas(s1, s2)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if !merged.Root.Nullable {
+		t.Error("Expected merged root to be Nullable")
+	}
+
+	foundConstraint := false
+	for _, c := range report.ConstraintsRelaxed {
+		if c == "root: Nullable false -> true" {
+			foundConstraint = true
+			break
+		}
+	}
+	if !foundConstraint {
+		t.Errorf("Expected constraint relaxation report for Nullable, got: %v", report.ConstraintsRelaxed)
+	}
+}
