@@ -1,3 +1,3 @@
-module xml-schema-helper
+module github.com/zodimo/go-xsdgen
 
 go 1.24.3

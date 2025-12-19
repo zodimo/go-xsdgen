@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"xml-schema-helper/pkg/xsd"
+	"github.com/zodimo/go-xsdgen/pkg/xsd"
 )
 
 func main() {
