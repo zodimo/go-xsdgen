@@ -63,8 +63,51 @@ Arguments:
 xsdgen validate -xml data.xml -xsd schema.xsd
 ```
 
+### Merge Schemas
+
+Merge multiple XML files into a single XSD.
+
+```bash
+xsdgen merge -style <style> <file1> <file2> ...
+```
+
+Arguments:
+- `-style`: Generation style (russian, salami, venetian). Default: `russian`.
+- `files`: Two or more XML files to merge.
+
+**Example:**
+
+```bash
+xsdgen merge -style venetian data1.xml data2.xml > merged_schema.xsd
+```
+
+## Library Usage
+
+The core logic is available in the `pkg/xsd` package, allowing programmatic access to schema analysis and merging.
+
+### Schema Merging
+
+You can merge two inferred schemas to create a generalized schema that validates both inputs. This is useful when learning from multiple XML samples.
+
+```go
+import "github.com/zodimo/go-xsdgen/pkg/xsd"
+
+// ... inside your code ...
+s1, _ := xsd.Analyze(reader1)
+s2, _ := xsd.Analyze(reader2)
+
+merged, report, err := xsd.MergeSchemas(s1, s2)
+if err != nil {
+    log.Fatal(err)
+}
+
+// report.FieldsAdded contains fields present in s2 but not s1
+// report.TypesGeneralized contains types that were widened (e.g. int -> string)
+```
+
 ## Features
 
 - **Type Inference**: Automatically detects `int`, `decimal`, `boolean`, `date`, `dateTime`, and `string`.
-- **structure Analysis**: Handles repeated elements (`maxOccurs="unbounded"`) and optional elements/attributes.
+- **Structure Analysis**: Handles repeated elements (`maxOccurs="unbounded"`) and optional elements/attributes.
 - **Multiple Styles**: Choose the XSD structure that fits your needs.
+- **Schema Merging**: Combine multiple inferred schemas into a single general definition with detailed change reporting.
