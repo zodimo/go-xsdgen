@@ -49,3 +49,33 @@ func TestAnalyzerOrdering(t *testing.T) {
 		}
 	}
 }
+
+func TestInferType(t *testing.T) {
+	tests := []struct {
+		val      string
+		expected SimpleType
+	}{
+		{"123", TypeInt},
+		{"0", TypeInt},
+		{"-123", TypeInt},
+		{"2147483647", TypeInt},
+		{"2147483648", TypeLong}, // Overflow int32
+		{"0123", TypeString},     // Leading zero -> String
+		{"007", TypeString},      // Leading zeros -> String
+		{"0.123", TypeFloat},     // Leading zero but decimal -> Float
+		{"12.34", TypeFloat},
+		{"true", TypeBool},
+		{"FALSE", TypeBool},
+		{"2023-12-25", TypeDate},
+		{"2023-12-25T12:00:00Z", TypeDateTime},
+		{"some string", TypeString},
+		{"", TypeString},
+	}
+
+	for _, tt := range tests {
+		got := inferType(tt.val)
+		if got != tt.expected {
+			t.Errorf("inferType(%q) = %v; want %v", tt.val, got, tt.expected)
+		}
+	}
+}

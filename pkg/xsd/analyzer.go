@@ -170,6 +170,12 @@ func Analyze(r io.Reader) (*Schema, error) {
 }
 
 func inferType(val string) SimpleType {
+	// Treat integers with leading zeros as strings (e.g. "0123", "007")
+	// Excluding "0" itself and floats like "0.123"
+	if len(val) > 1 && val[0] == '0' && val[1] >= '0' && val[1] <= '9' {
+		return TypeString
+	}
+
 	if n, err := strconv.ParseInt(val, 10, 64); err == nil {
 		// Check range for xs:int (32-bit signed)
 		// Min: -2147483648, Max: 2147483647
