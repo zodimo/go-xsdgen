@@ -170,17 +170,8 @@ func inferType(val string) SimpleType {
 		return TypeString
 	}
 
-	if n, err := strconv.ParseInt(val, 10, 64); err == nil {
-		// Check range for xs:int (32-bit signed)
-		// Min: -2147483648, Max: 2147483647
-		// XSD int is implementation dependent but typically 32-bit.
-		// Safe bet: if it fits in 32-bit, call it int. Else long.
-		const minInt32 = -2147483648
-		const maxInt32 = 2147483647
-		if n >= minInt32 && n <= maxInt32 {
-			return TypeInt
-		}
-		return TypeLong
+	if _, err := strconv.ParseInt(val, 10, 64); err == nil {
+		return TypeInteger
 	}
 	if _, err := strconv.ParseFloat(val, 64); err == nil {
 		return TypeFloat
@@ -209,17 +200,15 @@ func MergeSimpleTypes(t1, t2 SimpleType) SimpleType {
 		return t1
 	}
 
-	// Int/Long Hierarchy
-	if (t1 == TypeInt && t2 == TypeLong) || (t1 == TypeLong && t2 == TypeInt) {
-		return TypeLong
-	}
-
 	// Numeric -> Decimal
 	// Int/Long + Float -> Float (Decimal)
-	isNumeric1 := (t1 == TypeInt || t1 == TypeLong || t1 == TypeFloat)
-	isNumeric2 := (t2 == TypeInt || t2 == TypeLong || t2 == TypeFloat)
+	isNumeric1 := (t1 == TypeInteger || t1 == TypeFloat)
+	isNumeric2 := (t2 == TypeInteger || t2 == TypeFloat)
 	if isNumeric1 && isNumeric2 {
-		return TypeFloat
+		if t1 == TypeFloat || t2 == TypeFloat {
+			return TypeFloat
+		}
+		return TypeInteger
 	}
 
 	// Fallback to string for mismatched types (e.g. Bool + Int, Int + String)

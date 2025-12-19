@@ -5,8 +5,7 @@ type SimpleType string
 
 const (
 	TypeString   SimpleType = "string"
-	TypeInt      SimpleType = "int"
-	TypeLong     SimpleType = "long"
+	TypeInteger  SimpleType = "integer"
 	TypeFloat    SimpleType = "decimal"
 	TypeBool     SimpleType = "boolean"
 	TypeDateTime SimpleType = "dateTime"

@@ -83,11 +83,11 @@ This document tracks the support status of XML Schema Definition (XSD) features 
 - [ ] `ID`
 - [ ] `IDREF`
 - [ ] `ENTITY`
-- [ ] `integer` **(Inferable)** - *General unbounded integer*
+- [x] `integer` **(Inferable)** - *General unbounded integer*
 - [ ] `nonPositiveInteger`
 - [ ] `negativeInteger`
-- [x] `long`
-- [x] `int`
+- [ ] `long`
+- [ ] `int`
 - [ ] `short`
 - [ ] `byte`
 - [ ] `nonNegativeInteger`

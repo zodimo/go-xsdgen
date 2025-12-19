@@ -39,10 +39,8 @@ func Generate(w io.Writer, schema *Schema, style Style) error {
 
 func mapType(t SimpleType) string {
 	switch t {
-	case TypeInt:
-		return "xs:int"
-	case TypeLong:
-		return "xs:long"
+	case TypeInteger:
+		return "xs:integer"
 	case TypeFloat:
 		return "xs:decimal"
 	case TypeBool:

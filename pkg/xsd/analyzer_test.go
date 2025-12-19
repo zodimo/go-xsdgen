@@ -55,14 +55,14 @@ func TestInferType(t *testing.T) {
 		val      string
 		expected SimpleType
 	}{
-		{"123", TypeInt},
-		{"0", TypeInt},
-		{"-123", TypeInt},
-		{"2147483647", TypeInt},
-		{"2147483648", TypeLong}, // Overflow int32
-		{"0123", TypeString},     // Leading zero -> String
-		{"007", TypeString},      // Leading zeros -> String
-		{"0.123", TypeFloat},     // Leading zero but decimal -> Float
+		{"123", TypeInteger},
+		{"0", TypeInteger},
+		{"-123", TypeInteger},
+		{"2147483647", TypeInteger},
+		{"2147483648", TypeInteger}, // Overflow int32
+		{"0123", TypeString},        // Leading zero -> String
+		{"007", TypeString},         // Leading zeros -> String
+		{"0.123", TypeFloat},        // Leading zero but decimal -> Float
 		{"12.34", TypeFloat},
 		{"true", TypeBool},
 		{"FALSE", TypeBool},
@@ -89,8 +89,8 @@ func TestAnalyzerEmptyElement(t *testing.T) {
 		t.Fatalf("Analyze failed: %v", err)
 	}
 	val1 := schema1.Root.Children["Val"]
-	if val1.SimpleType != TypeInt {
-		t.Errorf("Case 1: Expected TypeInt, got %v", val1.SimpleType)
+	if val1.SimpleType != TypeInteger {
+		t.Errorf("Case 1: Expected TypeInteger, got %v", val1.SimpleType)
 	}
 	if !val1.Nullable {
 		t.Errorf("Case 1: Expected Nullable=true")
@@ -104,8 +104,8 @@ func TestAnalyzerEmptyElement(t *testing.T) {
 		t.Fatalf("Analyze failed: %v", err)
 	}
 	val2 := schema2.Root.Children["Val"]
-	if val2.SimpleType != TypeInt {
-		t.Errorf("Case 2: Expected TypeInt, got %v", val2.SimpleType)
+	if val2.SimpleType != TypeInteger {
+		t.Errorf("Case 2: Expected TypeInteger, got %v", val2.SimpleType)
 	}
 	if !val2.Nullable {
 		t.Errorf("Case 2: Expected Nullable=true")

@@ -6,18 +6,18 @@ import (
 
 func TestMergeSchemas_Identical(t *testing.T) {
 	s1 := &Schema{Root: NewElement("root")}
-	s1.Root.SimpleType = TypeInt
+	s1.Root.SimpleType = TypeInteger
 
 	s2 := &Schema{Root: NewElement("root")}
-	s2.Root.SimpleType = TypeInt
+	s2.Root.SimpleType = TypeInteger
 
 	merged, report, err := MergeSchemas(s1, s2)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	if merged.Root.SimpleType != TypeInt {
-		t.Errorf("Expected TypeInt, got %s", merged.Root.SimpleType)
+	if merged.Root.SimpleType != TypeInteger {
+		t.Errorf("Expected TypeInteger, got %s", merged.Root.SimpleType)
 	}
 
 	if len(report.FieldsAdded) > 0 || len(report.TypesGeneralized) > 0 || len(report.ConstraintsRelaxed) > 0 {
@@ -27,7 +27,7 @@ func TestMergeSchemas_Identical(t *testing.T) {
 
 func TestMergeSchemas_TypeGeneralization(t *testing.T) {
 	s1 := &Schema{Root: NewElement("root")}
-	s1.Root.SimpleType = TypeInt
+	s1.Root.SimpleType = TypeInteger
 
 	s2 := &Schema{Root: NewElement("root")}
 	s2.Root.SimpleType = TypeString
@@ -48,7 +48,7 @@ func TestMergeSchemas_TypeGeneralization(t *testing.T) {
 
 func TestMergeSchemas_NewAttribute(t *testing.T) {
 	s1 := &Schema{Root: NewElement("root")}
-	s1.Root.Attributes["attr1"] = &Attribute{Name: "attr1", Type: TypeInt, Required: true}
+	s1.Root.Attributes["attr1"] = &Attribute{Name: "attr1", Type: TypeInteger, Required: true}
 
 	s2 := &Schema{Root: NewElement("root")}
 	// s2 has no attributes
