@@ -108,36 +108,42 @@ func mergeElements(e1, e2 *Element, report *MergeReport, path string) *Element {
 		}
 	}
 
-	// Merge Children
-	// We need to preserve order somewhat.
-	// Start with S1 order.
-	for _, childName := range e1.ChildrenOrder {
-		child1 := e1.Children[childName]
-		if child2, ok := e2.Children[childName]; ok {
-			// In both
-			mergedChild := mergeElements(child1, child2, report, currentPath)
-			merged.Children[childName] = mergedChild
-			merged.ChildrenOrder = append(merged.ChildrenOrder, childName)
-		} else {
-			// Only in S1
+	// Merge Children with intelligent ordering
+	merged.ChildrenOrder = mergeChildOrder(e1.ChildrenOrder, e2.ChildrenOrder)
+	for _, childName := range merged.ChildrenOrder {
+		child1, in1 := e1.Children[childName]
+		child2, in2 := e2.Children[childName]
+
+		if in1 && in2 {
+			merged.Children[childName] = mergeElements(child1, child2, report, currentPath)
+		} else if in1 {
 			mergedChild := cloneElement(child1)
-			mergedChild.MinOccurs = 0 // Made optional
+			mergedChild.MinOccurs = 0
 			merged.Children[childName] = mergedChild
-			merged.ChildrenOrder = append(merged.ChildrenOrder, childName)
 			report.ConstraintsRelaxed = append(report.ConstraintsRelaxed, fmt.Sprintf("%s.%s: present in s1 only -> optional", currentPath, childName))
+		} else if in2 {
+			mergedChild := cloneElement(child2)
+			mergedChild.MinOccurs = 0
+			merged.Children[childName] = mergedChild
+			report.FieldsAdded = append(report.FieldsAdded, fmt.Sprintf("%s.%s", currentPath, childName))
 		}
 	}
 
-	// Append children from S2 that weren't in S1
-	for _, childName := range e2.ChildrenOrder {
-		if _, ok := e1.Children[childName]; !ok {
-			// Only in S2
-			child2 := e2.Children[childName]
-			mergedChild := cloneElement(child2)
-			mergedChild.MinOccurs = 0 // Made optional
-			merged.Children[childName] = mergedChild
-			merged.ChildrenOrder = append(merged.ChildrenOrder, childName)
-			report.FieldsAdded = append(report.FieldsAdded, fmt.Sprintf("%s.%s", currentPath, childName))
+	// Post-processing: Handle mixed-order duplicates
+	// If the merge logic produced duplicates in ChildrenOrder (due to mixed element orders in inputs),
+	// we must treat those elements as optional (MinOccurs=0) because they cannot be present in ALL positions simultaneously.
+	counts := make(map[string]int)
+	for _, name := range merged.ChildrenOrder {
+		counts[name]++
+	}
+	for name, count := range counts {
+		if count > 1 {
+			if child, ok := merged.Children[name]; ok {
+				if child.MinOccurs != 0 {
+					child.MinOccurs = 0
+					report.ConstraintsRelaxed = append(report.ConstraintsRelaxed, fmt.Sprintf("%s.%s: mixed order detected -> optional", currentPath, name))
+				}
+			}
 		}
 	}
 
@@ -194,4 +200,46 @@ func cloneElement(e *Element) *Element {
 	copy(newE.ChildrenOrder, e.ChildrenOrder)
 
 	return &newE
+}
+
+// mergeChildOrder combines two lists of children names, preserving order and interleaving new elements.
+func mergeChildOrder(base, other []string) []string {
+	result := make([]string, 0, len(base)+len(other))
+	result = append(result, base...)
+
+	// We weave 'other' into 'base'.
+	// This is a naive heuristic: if we find an element from 'other' already in 'result', we synchronize our position.
+	// If not, we insert it at the current position.
+
+	// BUT, inserting into a slice is expensive. Let's rebuild 'result' from scratch?
+	// Or use a more robust "diff/patch" approach?
+
+	// Let's try the "insertion cursor" approach on a copy of base.
+
+	// Since we already copied 'base' to 'result', let's iterate 'other'.
+	// We need to know where each element of 'result' is to check existence efficiently?
+	// For small lists, linear scan is fine.
+
+	insertIdx := 0
+	for _, name := range other {
+		// Does 'name' exist in 'result' *after* insertIdx?
+		foundIdx := -1
+		for i := insertIdx; i < len(result); i++ {
+			if result[i] == name {
+				foundIdx = i
+				break
+			}
+		}
+
+		if foundIdx != -1 {
+			// Found it. Advance cursor to just after it.
+			insertIdx = foundIdx + 1
+		} else {
+			// Not found (forward of current pos). Insert it at insertIdx.
+			result = append(result[:insertIdx], append([]string{name}, result[insertIdx:]...)...)
+			insertIdx++
+		}
+	}
+
+	return result
 }

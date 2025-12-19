@@ -102,6 +102,9 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Error analyzing %s: %v\n", inputFiles[0], err)
 			os.Exit(1)
 		}
+		if schema.Root != nil && schema.Root.Name == "schema" {
+			fmt.Fprintf(os.Stderr, "Warning: Input file '%s' appears to be an XSD Schema (root element 'schema'). 'xsdgen merge' expects XML data files to infer the schema, not XSD files.\n", inputFiles[0])
+		}
 
 		// Merge subsequent files
 		for i := 1; i < len(inputFiles); i++ {
@@ -115,6 +118,9 @@ func main() {
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error analyzing %s: %v\n", inputFiles[i], err)
 				os.Exit(1)
+			}
+			if s2.Root != nil && s2.Root.Name == "schema" {
+				fmt.Fprintf(os.Stderr, "Warning: Input file '%s' appears to be an XSD Schema (root element 'schema'). 'xsdgen merge' expects XML data files to infer the schema, not XSD files.\n", inputFiles[i])
 			}
 
 			merged, report, err := xsd.MergeSchemas(schema, s2)
