@@ -25,10 +25,15 @@ type XSDElement struct {
 type XSDComplexType struct {
 	Name     string          `xml:"name,attr,omitempty"`
 	Sequence *XSDSequence    `xml:"xs:sequence,omitempty"`
+	All      *XSDAll         `xml:"xs:all,omitempty"`
 	Attribs  []*XSDAttribute `xml:"xs:attribute,omitempty"`
 }
 
 type XSDSequence struct {
+	Elements []*XSDElement `xml:"xs:element"`
+}
+
+type XSDAll struct {
 	Elements []*XSDElement `xml:"xs:element"`
 }
 

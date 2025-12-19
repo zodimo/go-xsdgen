@@ -13,6 +13,13 @@ const (
 	TypeUnknown  SimpleType = "unknown"
 )
 
+type Compositor string
+
+const (
+	CompositorSequence Compositor = "sequence"
+	CompositorAll      Compositor = "all"
+)
+
 // Attribute represents an XML attribute
 type Attribute struct {
 	Name     string
@@ -25,6 +32,7 @@ type Attribute struct {
 type Element struct {
 	Name             string
 	SimpleType       SimpleType
+	Compositor       Compositor
 	Complex          bool
 	Attributes       map[string]*Attribute
 	Children         map[string]*Element

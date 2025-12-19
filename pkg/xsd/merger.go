@@ -131,17 +131,61 @@ func mergeElements(e1, e2 *Element, report *MergeReport, path string) *Element {
 
 	// Post-processing: Handle mixed-order duplicates
 	// If the merge logic produced duplicates in ChildrenOrder (due to mixed element orders in inputs),
-	// we must treat those elements as optional (MinOccurs=0) because they cannot be present in ALL positions simultaneously.
+	// we have two options:
+	// 1. Switch to <xs:all> (if maxOccurs constraints allow).
+	// 2. Keep <xs:sequence> but make elements optional (MinOccurs=0).
+
+	hasDuplicates := false
 	counts := make(map[string]int)
 	for _, name := range merged.ChildrenOrder {
 		counts[name]++
+		if counts[name] > 1 {
+			hasDuplicates = true
+		}
 	}
-	for name, count := range counts {
-		if count > 1 {
-			if child, ok := merged.Children[name]; ok {
-				if child.MinOccurs != 0 {
-					child.MinOccurs = 0
-					report.ConstraintsRelaxed = append(report.ConstraintsRelaxed, fmt.Sprintf("%s.%s: mixed order detected -> optional", currentPath, name))
+
+	if hasDuplicates {
+		// potential for xs:all?
+		canUseAll := true
+		for _, child := range merged.Children {
+			// xs:all requires minOccurs=0|1 and maxOccurs=1
+			if child.MaxOccurs > 1 || child.MaxOccurs == -1 {
+				canUseAll = false
+				break
+			}
+		}
+
+		if canUseAll {
+			// Switch to xs:all
+			merged.Compositor = CompositorAll
+			report.ConstraintsRelaxed = append(report.ConstraintsRelaxed, fmt.Sprintf("%s: mixed order -> switched to xs:all", currentPath))
+
+			// Deduplicate order
+			uniqueOrder := make([]string, 0)
+			seen := make(map[string]bool)
+			for _, name := range merged.ChildrenOrder {
+				if !seen[name] {
+					uniqueOrder = append(uniqueOrder, name)
+					seen[name] = true
+				}
+			}
+			merged.ChildrenOrder = uniqueOrder
+
+			// Ensure children are minOccurs=0 or 1.
+			// (If they were duplicates, they likely should be optional in xs:all if strictly they weren't everywhere,
+			// but xs:all inherently implies order independence.
+			// Check logic: if it was present in S1 and S2, minOccurs might be 1.
+			// If it was only in one, minOccurs=0. This is preserved.)
+		} else {
+			// Fallback to "messy" sequence
+			for name, count := range counts {
+				if count > 1 {
+					if child, ok := merged.Children[name]; ok {
+						if child.MinOccurs != 0 {
+							child.MinOccurs = 0
+							report.ConstraintsRelaxed = append(report.ConstraintsRelaxed, fmt.Sprintf("%s.%s: mixed order detected -> optional", currentPath, name))
+						}
+					}
 				}
 			}
 		}

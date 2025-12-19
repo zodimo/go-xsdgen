@@ -75,12 +75,22 @@ func buildElementRD(el *Element) *XSDElement {
 	if !el.Complex && len(el.Attributes) == 0 {
 		xEl.Type = mapType(el.SimpleType)
 	} else {
-		ct := &XSDComplexType{Sequence: &XSDSequence{}}
-		// Children
-		for _, childName := range el.ChildrenOrder {
-			child := el.Children[childName]
-			ct.Sequence.Elements = append(ct.Sequence.Elements, buildElementRD(child))
+		ct := &XSDComplexType{}
+
+		if el.Compositor == CompositorAll {
+			ct.All = &XSDAll{}
+			for _, childName := range el.ChildrenOrder {
+				child := el.Children[childName]
+				ct.All.Elements = append(ct.All.Elements, buildElementRD(child))
+			}
+		} else {
+			ct.Sequence = &XSDSequence{}
+			for _, childName := range el.ChildrenOrder {
+				child := el.Children[childName]
+				ct.Sequence.Elements = append(ct.Sequence.Elements, buildElementRD(child))
+			}
 		}
+
 		// Attributes
 		for _, attr := range el.Attributes {
 			use := "optional"
