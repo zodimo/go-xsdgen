@@ -15,6 +15,8 @@ Ensure you have Go installed (1.24+).
 
 ```bash
 go install ./cmd/xsdgen
+#or
+go install github.com/zodimo/go-xsdgen/cmd/xsdgen@latest
 ```
 
 Ensure that `$GOPATH/bin` (or `$HOME/go/bin`) is in your `$PATH`.
